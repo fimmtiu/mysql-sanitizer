@@ -9,13 +9,13 @@ import (
 
 // MysqlClient is a connection to the MySQL server.
 type MysqlClient struct {
-	// conn mysqlproto.Conn
-	stream *mysqlproto.Stream
+	stream     *mysqlproto.Stream
+	sanitizing bool
 }
 
 // NewMysqlClient returns a MysqlClient that's connected to the MySQL server.
-func NewMysqlClient(config Config, capabilityFlags uint32, database string) (*MysqlClient, error) {
-	var mc MysqlClient
+func NewMysqlClient(config Config) (*MysqlClient, error) {
+	mc := MysqlClient{nil, false}
 
 	addr, err := net.ResolveTCPAddr("tcp", config.MysqlHost)
 	if err != nil {
@@ -29,12 +29,11 @@ func NewMysqlClient(config Config, capabilityFlags uint32, database string) (*My
 	}
 	mc.stream = mysqlproto.NewStream(socket)
 
-	// mc.conn, err = mysqlproto.ConnectPlainHandshake(socket, capabilityFlags, config.MysqlUsername, config.MysqlPassword, database, map[string]string{})
-	// if err != nil {
-	// 	return nil, fmt.Errorf("Handshake to MySQL server failed: %s", err)
-	// }
-
 	return &mc, nil
+}
+
+func (mc *MysqlClient) ToggleSanitizing(active bool) {
+	mc.sanitizing = active
 }
 
 // Close closes the connection to the MySQL server.

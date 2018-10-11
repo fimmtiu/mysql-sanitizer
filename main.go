@@ -33,8 +33,12 @@ func main() {
 			log.Fatalf("Can't accept incoming connection on port %d: %s", config.ListeningPort, err)
 		}
 
-		client := NewClient(config, conn)
-		go client.ProcessInput()
+		client, err := NewClient(config, conn)
+		if err == nil {
+			go client.ProcessInput()
+		} else {
+			output.Log("Can't open connection to %s: %s", config.MysqlHost, err)
+		}
 	}
 }
 

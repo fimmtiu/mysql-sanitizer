@@ -9,15 +9,20 @@ import (
 // A Client represents a single client connection to the MySQL server.
 type Client struct {
 	stream *mysqlproto.Stream
-	// FIXME needs a channel to the MySQL server, or a connection, or something
+	mysql  *MysqlClient
 }
 
 // NewClient returns a new Client object.
-func NewClient(config Config, conn net.Conn) *Client {
+func NewClient(config Config, conn net.Conn) (*Client, error) {
 	var client Client
+	var err error
+
 	client.stream = mysqlproto.NewStream(conn)
-	// FIXME connect to the MySQL server here
-	return &client
+	client.mysql, err = NewMysqlClient(config)
+	if err != nil {
+		return nil, err
+	}
+	return &client, nil
 }
 
 // ProcessInput listens for client requests and proxies them to the MySQL server.
