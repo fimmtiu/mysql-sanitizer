@@ -12,6 +12,7 @@ type ClientConnection struct {
 	stream         *mysqlproto.Stream
 	capabilities   uint32
 	authPluginData []byte
+	database       string
 }
 
 type HandshakeContents struct {
@@ -27,7 +28,8 @@ type HandshakeContents struct {
 
 // NewClientConnection returns a new ClientConnection object.
 func NewClientConnection(proxy *ProxyConnection, conn net.Conn) *ClientConnection {
-	client := ClientConnection{proxy, nil, 0, []byte{}}
+	var client ClientConnection
+	client.proxy = proxy
 	client.stream = mysqlproto.NewStream(conn)
 	return &client
 }
@@ -87,6 +89,7 @@ func (client *ClientConnection) replacePassword(packet mysqlproto.Packet, userna
 	contents := client.parseHandshakeResponse(packet)
 	contents.username = config.MysqlUsername
 	contents.password = config.MysqlPassword
+	client.database = contents.database
 
 	newPayload := mysqlproto.HandshakeResponse41(
 		contents.flags&client.capabilities,
