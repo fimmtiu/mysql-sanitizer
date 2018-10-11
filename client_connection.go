@@ -88,9 +88,8 @@ func (client *ClientConnection) replacePassword(packet mysqlproto.Packet, userna
 	contents.username = config.MysqlUsername
 	contents.password = config.MysqlPassword
 
-	newFlags := (contents.flags & client.capabilities) | mysqlproto.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA
 	newPayload := mysqlproto.HandshakeResponse41(
-		newFlags,
+		contents.flags&client.capabilities,
 		contents.characterSet,
 		contents.username,
 		contents.password,
