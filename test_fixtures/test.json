@@ -1,0 +1,15 @@
+{
+    "common_development":{
+        "account_shard_mappings":[
+            "id","account_id","shard_id","name","created_at","updated_at"
+        ],
+        "admin_bonus_points":[
+            "id","admin_id","reward_tracker_id","reason","created_at"
+        ]
+    },
+    "another_db":{
+        "table1":[
+            "col1", "col2"
+        ]
+    }
+}
