@@ -34,6 +34,7 @@ func (client *ClientConnection) Run() {
 				client.proxy.ServerChannel <- packet
 			} else {
 				client.proxy.Close()
+				return
 			}
 		}
 	}

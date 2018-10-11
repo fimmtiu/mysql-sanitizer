@@ -52,6 +52,7 @@ func (server *ServerConnection) Run() {
 				server.proxy.ClientChannel <- packet
 			} else {
 				server.proxy.Close()
+				return
 			}
 		}
 	}
