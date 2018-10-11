@@ -48,7 +48,7 @@ func (server *ServerConnection) Run() {
 			return
 		}
 		output.Dump(packet.Payload, "Packet contents\n")
-		server.proxy.Channel <- packet
+		server.proxy.ClientChannel <- packet
 	}
 }
 
