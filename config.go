@@ -19,16 +19,18 @@ type Config struct {
 	MysqlPassword string // The password to log into MySQL with
 	ListeningPort int    // The port to listen for client connections on
 	LogLevel      int    // How much output to generate
+	WhitelistFile string
 }
 
 var defaultConfig = Config{
-	"-",         // LogFile
-	"localhost", // MysqlHost
-	3306,        // MysqlPort
-	"root",      // MysqlUsername
-	"",          // MysqlPassword
-	3306,        // ListeningPort
-	0,           // LogLevel
+	"-",              // LogFile
+	"localhost",      // MysqlHost
+	3306,             // MysqlPort
+	"root",           // MysqlUsername
+	"",               // MysqlPassword
+	3306,             // ListeningPort
+	0,                // LogLevel
+	"whitelist.json", // WhitlistFile
 }
 
 // GetConfig returns a compendium of configurations collected from the command line.
@@ -58,6 +60,7 @@ func GetConfig() Config {
 	flag.StringVar(&config.LogFile, "o", "-", "The filename to log output to (default stdout)")
 	flag.IntVar(&config.ListeningPort, "p", config.ListeningPort, "The port to listen for client connections on (default 3306)")
 	flag.IntVar(&config.LogLevel, "v", config.LogLevel, "The verbosity level (0-3, default 0)")
+	flag.StringVar(&config.WhitelistFile, "w", "whitelist.json", "The filename of the json file detailing which columns do not need to be sanitized (default whitelist.json)")
 	flag.Parse()
 
 	return config
