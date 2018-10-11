@@ -8,16 +8,18 @@ import (
 
 // A Client represents a single client connection to the MySQL server.
 type ClientConnection struct {
-	proxy  *ProxyConnection
-	stream *mysqlproto.Stream
+	proxy          *ProxyConnection
+	stream         *mysqlproto.Stream
+	capabilities   uint32
+	authPluginData []byte
 }
 
 type HandshakeContents struct {
 	flags          uint32
+	maxPacketSize  uint32
 	characterSet   byte
 	username       string
 	password       string
-	authPluginData []byte
 	database       string
 	authPluginName string
 	connectAttrs   map[string]string
@@ -25,23 +27,29 @@ type HandshakeContents struct {
 
 // NewClientConnection returns a new ClientConnection object.
 func NewClientConnection(proxy *ProxyConnection, conn net.Conn) *ClientConnection {
-	client := ClientConnection{proxy, nil}
+	client := ClientConnection{proxy, nil, 0, []byte{}}
 	client.stream = mysqlproto.NewStream(conn)
 	return &client
 }
 
 // ProcessInput listens for client requests and proxies them to the MySQL server.
 func (client *ClientConnection) Run() {
+	var packetCount uint64 = 0
 	incoming := make(chan mysqlproto.Packet)
 	go client.getPackets(incoming)
 
 	for {
 		select {
 		case packet := <-client.proxy.ClientChannel:
+			packetCount++
+			if packetCount == 1 {
+				// This is the first packet the server sent, so it must be
+				// the start of the handshake.
+				client.authPluginData = client.getAuthPluginData(packet)
+			}
 			WritePacket(client.stream, packet)
 		case packet, more := <-incoming:
 			if more {
-				output.Dump(packet.Payload, "Packet from client:\n")
 				client.proxy.ServerChannel <- packet
 			} else {
 				client.proxy.Close()
@@ -64,9 +72,9 @@ func (client *ClientConnection) getPackets(channel chan mysqlproto.Packet) {
 		packetCount++
 		if packetCount == 1 {
 			// This is the first packet the client sent, so it must be a handshake.
-			client.replacePassword(&packet, config.MysqlUsername, config.MysqlPassword)
+			packet = client.replacePassword(packet, config.MysqlUsername, config.MysqlPassword)
 		}
-		output.Dump(packet.Payload, "Packet from client:\n")
+		output.Dump(packet.Payload, "Packet %d from client:\n", packetCount)
 		channel <- packet
 	}
 }
@@ -75,18 +83,82 @@ func (client *ClientConnection) Close() {
 	client.stream.Close()
 }
 
-func (client *ClientConnection) replacePassword(packet *mysqlproto.Packet, username string, password string) {
-	// contents := client.parseHandshakeResponse(packet)
+func (client *ClientConnection) replacePassword(packet mysqlproto.Packet, username string, password string) mysqlproto.Packet {
+	contents := client.parseHandshakeResponse(packet)
+	contents.username = config.MysqlUsername
+	contents.password = config.MysqlPassword
 
-	// packet.Payload = contents
+	newFlags := (contents.flags & client.capabilities) | mysqlproto.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA
+	newPayload := mysqlproto.HandshakeResponse41(
+		newFlags,
+		contents.characterSet,
+		contents.username,
+		contents.password,
+		client.authPluginData,
+		contents.database,
+		contents.authPluginName,
+		map[string]string{}, // FIXME: We don't support client connect attrs yet.
+	)
+	return mysqlproto.Packet{packet.SequenceID, newPayload[4:]}
 }
 
-func (client *ClientConnection) parseHandshakeReponse(packet *mysqlproto.Packet) HandshakeContents {
+func (client *ClientConnection) parseHandshakeResponse(packet mysqlproto.Packet) HandshakeContents {
 	var contents HandshakeContents
 	parser := NewPacketParser(packet)
+
 	contents.flags = parser.ReadFixedInt4()
+	contents.maxPacketSize = parser.ReadFixedInt4()
 	contents.characterSet = parser.ReadFixedInt1()
-	// contents.username
+	parser.ReadFixedString(23) // ignore reserved null bytes
+	contents.username = parser.ReadNullTermString()
+
+	if (contents.flags&mysqlproto.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA > 0) ||
+		(contents.flags&mysqlproto.CLIENT_SECURE_CONNECTION > 0) {
+		contents.password = parser.ReadVariableString()
+	} else {
+		contents.password = parser.ReadNullTermString()
+	}
+
+	if contents.flags&mysqlproto.CLIENT_CONNECT_WITH_DB > 0 {
+		contents.database = parser.ReadNullTermString()
+	}
+
+	if contents.flags&mysqlproto.CLIENT_PLUGIN_AUTH > 0 {
+		contents.authPluginName = parser.ReadNullTermString()
+	}
+
+	// FIXME: We don't support client connect attrs yet.
 
 	return contents
+}
+
+func (client *ClientConnection) getAuthPluginData(packet mysqlproto.Packet) []byte {
+	parser := NewPacketParser(packet)
+	parser.ReadFixedInt1()                    // protocol version
+	parser.ReadNullTermString()               // server version
+	parser.ReadFixedInt4()                    // connection id
+	data := []byte(parser.ReadFixedString(8)) // initial part of the auth plugin data
+	parser.ReadFixedInt1()                    // unused filler byte
+	lowerFlags := parser.ReadFixedInt2()      // capability flags
+
+	if uint64(len(packet.Payload)) <= parser.offset {
+		return data
+	}
+
+	parser.ReadFixedInt1()               // character set
+	parser.ReadFixedInt2()               // status flags
+	upperFlags := parser.ReadFixedInt2() // more capability flags, sheesh
+	client.capabilities = uint32(lowerFlags) | (uint32(upperFlags) << 16)
+	var dataLen uint64 = uint64(parser.ReadFixedInt1() - 8)
+	if dataLen > 13 {
+		dataLen = 13
+	}
+	parser.ReadFixedString(10) // unused garbage
+
+	if client.capabilities&mysqlproto.CLIENT_SECURE_CONNECTION > 0 {
+		// Don't ask about the -1. :~(
+		data = append(data, []byte(parser.ReadFixedString(dataLen-1))...)
+	}
+
+	return data
 }

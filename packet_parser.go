@@ -11,7 +11,7 @@ type PacketParser struct {
 	offset uint64
 }
 
-func NewPacketParser(packet *mysqlproto.Packet) *PacketParser {
+func NewPacketParser(packet mysqlproto.Packet) *PacketParser {
 	return &PacketParser{packet.Payload, 0}
 }
 
@@ -33,7 +33,7 @@ func (parser *PacketParser) ReadEncodedInt() uint64 {
 }
 
 func (parser *PacketParser) ReadFixedString(length uint64) string {
-	bytes := parser.data[parser.offset:length]
+	bytes := parser.data[parser.offset : parser.offset+length]
 	parser.offset += length
 	return string(bytes)
 }
@@ -59,7 +59,7 @@ func (parser *PacketParser) ReadNullTermString() string {
 
 func (parser *PacketParser) ReadVariableString() string {
 	strlen := parser.ReadEncodedInt()
-	bytes := parser.data[parser.offset : strlen+1]
+	bytes := parser.data[parser.offset : parser.offset+strlen]
 	parser.offset += strlen
 	return string(bytes)
 }
@@ -90,7 +90,7 @@ func (parser *PacketParser) ReadFixedInt4() uint32 {
 		uint32(parser.data[parser.offset+2])<<16 |
 		uint32(parser.data[parser.offset+1])<<8 |
 		uint32(parser.data[parser.offset])
-	parser.offset += 3
+	parser.offset += 4
 	return fixedInt
 }
 

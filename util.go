@@ -14,6 +14,5 @@ func WritePacket(stream *mysqlproto.Stream, packet mysqlproto.Packet) {
 	if copied != len(packet.Payload) {
 		panic("wtf")
 	}
-	output.Dump(contents, "Writing packet:\n")
 	stream.Write(contents)
 }
