@@ -4,7 +4,7 @@ Brightens, whitens, and shines dingy, dusty, and dirty data!
 
 ## TODO
 
-* Get a list of whitelisted columns (JSON file?) and read it on startup.
+* Make the JSON whitelist file a config variable which the user can specify.
 
 * Write the sanitizer to remove non-whitelisted columns from responses.
 
