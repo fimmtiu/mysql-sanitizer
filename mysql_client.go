@@ -9,6 +9,8 @@ import (
 
 // MysqlClient is a connection to the MySQL server.
 type MysqlClient struct {
+	Input      chan mysqlproto.Packet
+	Done       chan error
 	stream     *mysqlproto.Stream
 	sanitizing bool
 }
@@ -29,11 +31,18 @@ func NewMysqlClient(config Config) (*MysqlClient, error) {
 	}
 	mc.stream = mysqlproto.NewStream(socket)
 
+	mc.Input = make(chan mysqlproto.Packet)
+	mc.Done = make(chan error)
+
 	return &mc, nil
 }
 
 func (mc *MysqlClient) ToggleSanitizing(active bool) {
 	mc.sanitizing = active
+}
+
+func (mc *MysqlClient) Run() {
+	// ...
 }
 
 // Close closes the connection to the MySQL server.
