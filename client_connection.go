@@ -10,9 +10,7 @@ import (
 type ClientConnection struct {
 	proxy          *ProxyConnection
 	stream         *mysqlproto.Stream
-	capabilities   uint32
 	authPluginData []byte
-	database       string
 }
 
 type HandshakeContents struct {
@@ -89,10 +87,10 @@ func (client *ClientConnection) replacePassword(packet mysqlproto.Packet, userna
 	contents := client.parseHandshakeResponse(packet)
 	contents.username = config.MysqlUsername
 	contents.password = config.MysqlPassword
-	client.database = contents.database
+	client.proxy.Database = contents.database
 
 	newPayload := mysqlproto.HandshakeResponse41(
-		contents.flags&client.capabilities,
+		contents.flags&client.proxy.Capabilities,
 		contents.characterSet,
 		contents.username,
 		contents.password,
@@ -150,14 +148,14 @@ func (client *ClientConnection) getAuthPluginData(packet mysqlproto.Packet) []by
 	parser.ReadFixedInt1()               // character set
 	parser.ReadFixedInt2()               // status flags
 	upperFlags := parser.ReadFixedInt2() // more capability flags, sheesh
-	client.capabilities = uint32(lowerFlags) | (uint32(upperFlags) << 16)
+	client.proxy.Capabilities = uint32(lowerFlags) | (uint32(upperFlags) << 16)
 	var dataLen uint64 = uint64(parser.ReadFixedInt1() - 8)
 	if dataLen > 13 {
 		dataLen = 13
 	}
 	parser.ReadFixedString(10) // unused garbage
 
-	if client.capabilities&mysqlproto.CLIENT_SECURE_CONNECTION > 0 {
+	if client.proxy.Capabilities&mysqlproto.CLIENT_SECURE_CONNECTION > 0 {
 		// Don't ask about the -1. :~(
 		data = append(data, []byte(parser.ReadFixedString(dataLen-1))...)
 	}

@@ -11,11 +11,15 @@ type ProxyConnection struct {
 	server        *ServerConnection
 	ClientChannel chan mysqlproto.Packet
 	ServerChannel chan mysqlproto.Packet
+	Capabilities  uint32
+	Database      string
 }
 
 func NewProxyConnection(conn net.Conn) (*ProxyConnection, error) {
 	var err error
-	proxy := ProxyConnection{nil, nil, make(chan mysqlproto.Packet), make(chan mysqlproto.Packet)}
+	var proxy ProxyConnection
+	proxy.ClientChannel = make(chan mysqlproto.Packet)
+	proxy.ServerChannel = make(chan mysqlproto.Packet)
 
 	proxy.client = NewClientConnection(&proxy, conn)
 	proxy.server, err = NewServerConnection(&proxy)

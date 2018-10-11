@@ -40,6 +40,7 @@ func (server *ServerConnection) ToggleSanitizing(active bool) {
 }
 
 func (server *ServerConnection) Run() {
+	sanitizer := NewSanitizer()
 	incoming := make(chan mysqlproto.Packet)
 	go server.getPackets(incoming)
 
@@ -49,6 +50,9 @@ func (server *ServerConnection) Run() {
 			WritePacket(server.stream, packet)
 		case packet, more := <-incoming:
 			if more {
+				if server.sanitizing {
+					packet = sanitizer.Sanitize(packet)
+				}
 				server.proxy.ClientChannel <- packet
 			} else {
 				server.proxy.Close()
