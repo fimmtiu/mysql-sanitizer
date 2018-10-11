@@ -7,7 +7,7 @@ import (
 )
 
 func TestReadEncodedInt_1(t *testing.T) {
-	packet := mysqlproto.Packet{0, []byte("\x21")}
+	packet := &mysqlproto.Packet{0, []byte("\x21")}
 	parser := NewPacketParser(packet)
 	value := parser.ReadEncodedInt()
 	if value != 33 {
@@ -19,7 +19,7 @@ func TestReadEncodedInt_1(t *testing.T) {
 }
 
 func TestReadEncodedInt_2(t *testing.T) {
-	packet := mysqlproto.Packet{0, []byte("\xFC\x21\x01")}
+	packet := &mysqlproto.Packet{0, []byte("\xFC\x21\x01")}
 	parser := NewPacketParser(packet)
 	value := parser.ReadEncodedInt()
 	if value != 289 {
@@ -31,7 +31,7 @@ func TestReadEncodedInt_2(t *testing.T) {
 }
 
 func TestReadEncodedInt_3(t *testing.T) {
-	packet := mysqlproto.Packet{0, []byte("\xFD\x21\x01\x03")}
+	packet := &mysqlproto.Packet{0, []byte("\xFD\x21\x01\x03")}
 	parser := NewPacketParser(packet)
 	value := parser.ReadEncodedInt()
 	if value != 196897 {
@@ -43,7 +43,7 @@ func TestReadEncodedInt_3(t *testing.T) {
 }
 
 func TestReadEncodedInt_8(t *testing.T) {
-	packet := mysqlproto.Packet{0, []byte("\xFE\x21\x01\x03\x68\x00\x00\x00\x00\x00")}
+	packet := &mysqlproto.Packet{0, []byte("\xFE\x21\x01\x03\x68\x00\x00\x00\x00\x00")}
 	parser := NewPacketParser(packet)
 	value := parser.ReadEncodedInt()
 	if value != 1745027361 {
@@ -54,8 +54,32 @@ func TestReadEncodedInt_8(t *testing.T) {
 	}
 }
 
+func TestReadFixedString(t *testing.T) {
+	packet := &mysqlproto.Packet{0, []byte("hello world!")}
+	parser := NewPacketParser(packet)
+	value := parser.ReadFixedString(7)
+	if value != "hello w" {
+		t.Errorf("Bogus value for variable string: '%s'", value)
+	}
+	if parser.offset != 7 {
+		t.Errorf("Bogus value for offset after fixed string read: 0x%02x", parser.offset)
+	}
+}
+
+func TestReadNullTermString(t *testing.T) {
+	packet := &mysqlproto.Packet{0, []byte("hello world!\x00foo")}
+	parser := NewPacketParser(packet)
+	value := parser.ReadNullTermString()
+	if value != "hello world!" {
+		t.Errorf("Bogus value for variable string: '%s'", value)
+	}
+	if parser.offset != 13 {
+		t.Errorf("Bogus value for offset after null-terminated string read: 0x%02x", parser.offset)
+	}
+}
+
 func TestReadVariableString(t *testing.T) {
-	packet := mysqlproto.Packet{0, []byte("\x0chello world!")}
+	packet := &mysqlproto.Packet{0, []byte("\x0chello world!")}
 	parser := NewPacketParser(packet)
 	value := parser.ReadVariableString()
 	if value != "hello world!" {
