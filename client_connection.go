@@ -12,6 +12,17 @@ type ClientConnection struct {
 	stream *mysqlproto.Stream
 }
 
+type HandshakeContents struct {
+	flags          uint32
+	characterSet   byte
+	username       string
+	password       string
+	authPluginData []byte
+	database       string
+	authPluginName string
+	connectAttrs   map[string]string
+}
+
 // NewClientConnection returns a new ClientConnection object.
 func NewClientConnection(proxy *ProxyConnection, conn net.Conn) *ClientConnection {
 	client := ClientConnection{proxy, nil}
@@ -41,12 +52,19 @@ func (client *ClientConnection) Run() {
 }
 
 func (client *ClientConnection) getPackets(channel chan mysqlproto.Packet) {
+	var packetCount uint64 = 0
+
 	for {
 		packet, err := client.stream.NextPacket()
 		if err != nil {
 			output.Log("Disconnected from client: %s", err)
 			close(channel)
 			return
+		}
+		packetCount++
+		if packetCount == 1 {
+			// This is the first packet the client sent, so it must be a handshake.
+			client.replacePassword(&packet, config.MysqlUsername, config.MysqlPassword)
 		}
 		output.Dump(packet.Payload, "Packet from client:\n")
 		channel <- packet
@@ -55,4 +73,20 @@ func (client *ClientConnection) getPackets(channel chan mysqlproto.Packet) {
 
 func (client *ClientConnection) Close() {
 	client.stream.Close()
+}
+
+func (client *ClientConnection) replacePassword(packet *mysqlproto.Packet, username string, password string) {
+	// contents := client.parseHandshakeResponse(packet)
+
+	// packet.Payload = contents
+}
+
+func (client *ClientConnection) parseHandshakeReponse(packet *mysqlproto.Packet) HandshakeContents {
+	var contents HandshakeContents
+	parser := NewPacketParser(packet)
+	contents.flags = parser.ReadFixedInt4()
+	contents.characterSet = parser.ReadFixedInt1()
+	// contents.username
+
+	return contents
 }

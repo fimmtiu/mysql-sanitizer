@@ -11,22 +11,50 @@ type PacketParser struct {
 	offset uint64
 }
 
-func NewPacketParser(packet mysqlproto.Packet) *PacketParser {
+func NewPacketParser(packet *mysqlproto.Packet) *PacketParser {
 	return &PacketParser{packet.Payload, 0}
 }
 
 func (parser *PacketParser) ReadEncodedInt() uint64 {
 	if parser.data[parser.offset] < 0xFB {
-		return uint64(parser.readFixedInt1(parser.offset))
+		return uint64(parser.ReadFixedInt1())
 	} else if parser.data[parser.offset] == 0xFC {
-		return uint64(parser.readFixedInt2(parser.offset + 1))
+		parser.offset++
+		return uint64(parser.ReadFixedInt2())
 	} else if parser.data[parser.offset] == 0xFD {
-		return uint64(parser.readFixedInt3(parser.offset + 1))
+		parser.offset++
+		return uint64(parser.ReadFixedInt3())
 	} else if parser.data[parser.offset] == 0xFE {
-		return uint64(parser.readFixedInt8(parser.offset + 1))
+		parser.offset++
+		return uint64(parser.ReadFixedInt8())
 	} else {
 		panic(fmt.Sprintf("Invalid header byte for length-encoded integer: 0x%02x!", parser.data[0]))
 	}
+}
+
+func (parser *PacketParser) ReadFixedString(length uint64) string {
+	bytes := parser.data[parser.offset:length]
+	parser.offset += length
+	return string(bytes)
+}
+
+func (parser *PacketParser) ReadNullTermString() string {
+	var null_index int = -1
+
+	for i, byte := range parser.data[parser.offset:] {
+		if byte == 0x00 {
+			null_index = i
+			break
+		}
+	}
+
+	if null_index < 0 {
+		panic("Didn't find a NUL when looking for a null-terminated string!")
+	}
+
+	bytes := parser.data[parser.offset : parser.offset+uint64(null_index)]
+	parser.offset += uint64(len(bytes)) + 1
+	return string(bytes)
 }
 
 func (parser *PacketParser) ReadVariableString() string {
@@ -36,34 +64,46 @@ func (parser *PacketParser) ReadVariableString() string {
 	return string(bytes)
 }
 
-func (parser *PacketParser) readFixedInt1(offset uint64) uint8 {
-	fixedInt := parser.data[offset]
-	parser.offset = offset + 1
+func (parser *PacketParser) ReadFixedInt1() uint8 {
+	fixedInt := parser.data[parser.offset]
+	parser.offset++
 	return fixedInt
 }
 
-func (parser *PacketParser) readFixedInt2(offset uint64) uint16 {
-	var fixedInt uint16 = uint16(parser.data[offset+1])<<8 | uint16(parser.data[offset])
-	parser.offset = offset + 2
+func (parser *PacketParser) ReadFixedInt2() uint16 {
+	var fixedInt uint16 = uint16(parser.data[parser.offset+1])<<8 |
+		uint16(parser.data[parser.offset])
+	parser.offset += 2
 	return fixedInt
 }
 
-func (parser *PacketParser) readFixedInt3(offset uint64) uint32 {
-	var fixedInt uint32 = uint32(parser.data[offset+2])<<16 | uint32(parser.data[offset+1])<<8 | uint32(parser.data[offset])
-	parser.offset = offset + 3
+func (parser *PacketParser) ReadFixedInt3() uint32 {
+	var fixedInt uint32 = uint32(parser.data[parser.offset+2])<<16 |
+		uint32(parser.data[parser.offset+1])<<8 |
+		uint32(parser.data[parser.offset])
+	parser.offset += 3
+	return fixedInt
+}
+
+func (parser *PacketParser) ReadFixedInt4() uint32 {
+	var fixedInt uint32 = uint32(parser.data[parser.offset+3])<<24 |
+		uint32(parser.data[parser.offset+2])<<16 |
+		uint32(parser.data[parser.offset+1])<<8 |
+		uint32(parser.data[parser.offset])
+	parser.offset += 3
 	return fixedInt
 }
 
 // And of course I can't line this up nicely, because gofmt.
-func (parser *PacketParser) readFixedInt8(offset uint64) uint64 {
-	var fixedInt uint64 = uint64(parser.data[offset+7])<<56 |
-		uint64(parser.data[offset+6])<<48 |
-		uint64(parser.data[offset+5])<<40 |
-		uint64(parser.data[offset+4])<<32 |
-		uint64(parser.data[offset+3])<<24 |
-		uint64(parser.data[offset+2])<<16 |
-		uint64(parser.data[offset+1])<<8 |
-		uint64(parser.data[offset])
-	parser.offset = offset + 8
+func (parser *PacketParser) ReadFixedInt8() uint64 {
+	var fixedInt uint64 = uint64(parser.data[parser.offset+7])<<56 |
+		uint64(parser.data[parser.offset+6])<<48 |
+		uint64(parser.data[parser.offset+5])<<40 |
+		uint64(parser.data[parser.offset+4])<<32 |
+		uint64(parser.data[parser.offset+3])<<24 |
+		uint64(parser.data[parser.offset+2])<<16 |
+		uint64(parser.data[parser.offset+1])<<8 |
+		uint64(parser.data[parser.offset])
+	parser.offset += 8
 	return fixedInt
 }
