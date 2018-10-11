@@ -24,7 +24,7 @@ func (client *ClientConnection) Run() {
 	for {
 		packet, err := client.stream.NextPacket()
 		if err != nil {
-			output.Log("Disconnected from MySQL server: %s", err)
+			output.Log("Disconnected from client: %s", err)
 			client.proxy.Close()
 			return
 		}

@@ -53,7 +53,7 @@ func (out Output) Dump(slice []byte, format string, args ...interface{}) {
 				if len(slice)-i*16 <= j {
 					str += "   "
 				} else {
-					str += fmt.Sprintf("%2x ", slice[i*16+j])
+					str += fmt.Sprintf("%02x ", slice[i*16+j])
 				}
 			}
 

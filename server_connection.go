@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/pubnative/mysqlproto-go"
 )
@@ -16,9 +17,10 @@ type ServerConnection struct {
 
 // NewServerConnection returns a ServerConnection that's connected to the MySQL server.
 func NewServerConnection(proxy *ProxyConnection) (*ServerConnection, error) {
-	mc := ServerConnection{proxy, nil, false}
+	server := ServerConnection{proxy, nil, false}
 
-	addr, err := net.ResolveTCPAddr("tcp", config.MysqlHost)
+	addrString := config.MysqlHost + ":" + strconv.Itoa(config.MysqlPort)
+	addr, err := net.ResolveTCPAddr("tcp", addrString)
 	if err != nil {
 		return nil, fmt.Errorf("Can't resolve host %s: %s", config.MysqlHost, err)
 	}
@@ -28,20 +30,29 @@ func NewServerConnection(proxy *ProxyConnection) (*ServerConnection, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Can't connect to %s on port %d:  %s", config.MysqlHost, addr.Port, err)
 	}
-	mc.stream = mysqlproto.NewStream(socket)
+	server.stream = mysqlproto.NewStream(socket)
 
-	return &mc, nil
+	return &server, nil
 }
 
-func (mc *ServerConnection) ToggleSanitizing(active bool) {
-	mc.sanitizing = active
+func (server *ServerConnection) ToggleSanitizing(active bool) {
+	server.sanitizing = active
 }
 
-func (mc *ServerConnection) Run() {
-	// ...
+func (server *ServerConnection) Run() {
+	for {
+		packet, err := server.stream.NextPacket()
+		if err != nil {
+			output.Log("Disconnected from MySQL server: %s", err)
+			server.proxy.Close()
+			return
+		}
+		output.Dump(packet.Payload, "Packet contents\n")
+		server.proxy.Channel <- packet
+	}
 }
 
 // Close closes the connection to the MySQL server.
-func (mc *ServerConnection) Close() {
-	mc.stream.Close()
+func (server *ServerConnection) Close() {
+	server.stream.Close()
 }
