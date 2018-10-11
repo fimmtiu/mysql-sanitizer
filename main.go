@@ -7,25 +7,12 @@ import (
 )
 
 var output Output
+var config Config
 
 func main() {
-	config := GetConfig()
+	config = GetConfig()
 	output = NewOutput(config)
 	listener := openListeningSocket(config.ListeningPort)
-
-	/* We want:
-	  - A sanitizer function which takes a packet and returns a sanitized packet
-	  - N connections to the MySQL server
-		- when instantiated, creates a goroutine and returns a channel to communicate with it
-		- listens to the channel for packets from the client
-		- when it gets one, sends it to the MySQL server
-		- listens for the response
-		- runs each response packet through the sanitizer
-		- sends each sanitized response packet back over the channel
-	  - N client connections
-		- use mysqlproto to read incoming packets from the connection
-		- sends the packet to its MySQL server connection channel
-	*/
 
 	for {
 		conn, err := listener.Accept()
@@ -33,9 +20,9 @@ func main() {
 			log.Fatalf("Can't accept incoming connection on port %d: %s", config.ListeningPort, err)
 		}
 
-		client, err := NewClient(config, conn)
+		proxy, err := NewProxyConnection(conn)
 		if err == nil {
-			go client.ProcessInput()
+			proxy.Start()
 		} else {
 			output.Log("Can't open connection to %s: %s", config.MysqlHost, err)
 		}

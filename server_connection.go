@@ -7,17 +7,16 @@ import (
 	"github.com/pubnative/mysqlproto-go"
 )
 
-// MysqlClient is a connection to the MySQL server.
-type MysqlClient struct {
-	Input      chan mysqlproto.Packet
-	Done       chan error
+// ServerConnection is a connection to the MySQL server.
+type ServerConnection struct {
+	proxy      *ProxyConnection
 	stream     *mysqlproto.Stream
 	sanitizing bool
 }
 
-// NewMysqlClient returns a MysqlClient that's connected to the MySQL server.
-func NewMysqlClient(config Config) (*MysqlClient, error) {
-	mc := MysqlClient{nil, false}
+// NewServerConnection returns a ServerConnection that's connected to the MySQL server.
+func NewServerConnection(proxy *ProxyConnection) (*ServerConnection, error) {
+	mc := ServerConnection{proxy, nil, false}
 
 	addr, err := net.ResolveTCPAddr("tcp", config.MysqlHost)
 	if err != nil {
@@ -31,21 +30,18 @@ func NewMysqlClient(config Config) (*MysqlClient, error) {
 	}
 	mc.stream = mysqlproto.NewStream(socket)
 
-	mc.Input = make(chan mysqlproto.Packet)
-	mc.Done = make(chan error)
-
 	return &mc, nil
 }
 
-func (mc *MysqlClient) ToggleSanitizing(active bool) {
+func (mc *ServerConnection) ToggleSanitizing(active bool) {
 	mc.sanitizing = active
 }
 
-func (mc *MysqlClient) Run() {
+func (mc *ServerConnection) Run() {
 	// ...
 }
 
 // Close closes the connection to the MySQL server.
-func (mc *MysqlClient) Close() {
+func (mc *ServerConnection) Close() {
 	mc.stream.Close()
 }

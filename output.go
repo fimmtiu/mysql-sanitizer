@@ -24,7 +24,7 @@ type Output struct {
 func NewOutput(config Config) (out Output) {
 	var fileHandle io.Writer
 
-	if config.LogFile == "-" {
+	if config.LogFile != "-" {
 		file, err := os.OpenFile(config.LogFile, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			log.Fatalf("Can't open logfile %s: %s", config.LogFile, err)

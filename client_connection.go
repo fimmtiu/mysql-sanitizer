@@ -7,31 +7,25 @@ import (
 )
 
 // A Client represents a single client connection to the MySQL server.
-type Client struct {
+type ClientConnection struct {
+	proxy  *ProxyConnection
 	stream *mysqlproto.Stream
-	mysql  *MysqlClient
 }
 
-// NewClient returns a new Client object.
-func NewClient(config Config, conn net.Conn) (*Client, error) {
-	var client Client
-	var err error
-
+// NewClientConnection returns a new ClientConnection object.
+func NewClientConnection(proxy *ProxyConnection, conn net.Conn) *ClientConnection {
+	client := ClientConnection{proxy, nil}
 	client.stream = mysqlproto.NewStream(conn)
-	client.mysql, err = NewMysqlClient(config)
-	if err != nil {
-		return nil, err
-	}
-	return &client, nil
+	return &client
 }
 
 // ProcessInput listens for client requests and proxies them to the MySQL server.
-func (client *Client) ProcessInput() {
+func (client *ClientConnection) Run() {
 	for {
 		packet, err := client.stream.NextPacket()
 		if err != nil {
 			output.Log("Disconnected from MySQL server: %s", err)
-			client.close()
+			client.proxy.Close()
 			return
 		}
 		output.Log("Packet: type %d", packet.Payload[0])
@@ -39,6 +33,6 @@ func (client *Client) ProcessInput() {
 	}
 }
 
-func (client *Client) close() {
+func (client *ClientConnection) Close() {
 	client.stream.Close()
 }
