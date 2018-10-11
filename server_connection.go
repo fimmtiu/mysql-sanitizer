@@ -40,15 +40,33 @@ func (server *ServerConnection) ToggleSanitizing(active bool) {
 }
 
 func (server *ServerConnection) Run() {
+	incoming := make(chan mysqlproto.Packet)
+	go server.getPackets(incoming)
+
+	for {
+		select {
+		case packet := <-server.proxy.ServerChannel:
+			WritePacket(server.stream, packet)
+		case packet, more := <-incoming:
+			if more {
+				server.proxy.ClientChannel <- packet
+			} else {
+				server.proxy.Close()
+			}
+		}
+	}
+}
+
+func (server *ServerConnection) getPackets(channel chan mysqlproto.Packet) {
 	for {
 		packet, err := server.stream.NextPacket()
 		if err != nil {
 			output.Log("Disconnected from MySQL server: %s", err)
-			server.proxy.Close()
+			close(channel)
 			return
 		}
-		output.Dump(packet.Payload, "Packet contents\n")
-		server.proxy.ClientChannel <- packet
+		output.Dump(packet.Payload, "Packet from server:\n")
+		channel <- packet
 	}
 }
 
