@@ -19,3 +19,5 @@ Note that, since it's more of a proof-of-concept than a finished program, it pre
 * Consider removing mysqlproto entirely and rolling our own packet stuff. It's not great, and didn't buy us nearly as much as we'd hoped.
 
 * Will our rewriting strings cause us to exceed `max_allowed_packet` for very large requests?
+
+* ClientChannel and ServerChannel have terrible names.

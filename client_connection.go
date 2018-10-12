@@ -34,18 +34,18 @@ func NewClientConnection(proxy *ProxyConnection, conn net.Conn) *ClientConnectio
 
 // ProcessInput listens for client requests and proxies them to the MySQL server.
 func (client *ClientConnection) Run() {
-	var packetCount uint64 = 0
+	firstPacket := true
 	incoming := make(chan mysqlproto.Packet)
 	go client.getPackets(incoming)
 
 	for {
 		select {
 		case packet := <-client.proxy.ClientChannel:
-			packetCount++
-			if packetCount == 1 {
+			if firstPacket {
 				// This is the first packet the server sent, so it must be
 				// the start of the handshake.
 				client.authPluginData = client.getAuthPluginData(packet)
+				firstPacket = false
 			}
 			WritePacket(client.stream, packet)
 		case packet, more := <-incoming:
@@ -60,7 +60,7 @@ func (client *ClientConnection) Run() {
 }
 
 func (client *ClientConnection) getPackets(channel chan mysqlproto.Packet) {
-	var packetCount uint64 = 0
+	firstPacket := true
 
 	for {
 		packet, err := client.stream.NextPacket()
@@ -69,12 +69,12 @@ func (client *ClientConnection) getPackets(channel chan mysqlproto.Packet) {
 			close(channel)
 			return
 		}
-		packetCount++
-		if packetCount == 1 {
+		if firstPacket {
 			// This is the first packet the client sent, so it must be a handshake.
 			packet = client.replacePassword(packet, config.MysqlUsername, config.MysqlPassword)
+			firstPacket = false
 		}
-		output.Dump(packet.Payload, "Packet %d from client:\n", packetCount)
+		output.Dump(packet.Payload, "Packet from client:\n")
 		channel <- packet
 	}
 }
