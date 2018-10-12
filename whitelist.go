@@ -42,3 +42,16 @@ func NewWhitelist(path string) (*Whitelist, error) {
 	return wl, nil
 
 }
+
+func (wl Whitelist) IsColumnPresent(database string, table string, colname string) bool {
+	if _, ok := wl.Databases[database]; ok {
+		if _, ok := wl.Databases[database][table]; ok {
+			for _, name := range wl.Databases[database][table] {
+				if colname == name {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
