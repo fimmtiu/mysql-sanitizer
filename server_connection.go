@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -89,7 +90,33 @@ func (server *ServerConnection) doHandshake() {
 		server.finished = true
 		return
 	}
+
+	err = server.setStatementTimeout(20) // Kill queries if they run for over 20 seconds
+	if err != nil {
+		output.Log("Couldn't set max_statement_time: %s", err)
+		server.finished = true
+		return
+	}
+
 	server.proxy.ClientChannel <- response
+}
+
+// This is a Percona-specific feature. Later versions of MySQL (5.7.4 and
+// up) have similar functionality built in, so we should use that instead
+// once we've upgraded.
+// https://www.percona.com/doc/percona-server/5.6/management/statement_timeout.html
+func (server *ServerConnection) setStatementTimeout(seconds int) error {
+	query := fmt.Sprintf("\x03SET max_statement_time = %d", seconds*1000)
+	setCommand := mysqlproto.Packet{0, []byte(query)}
+	output.Dump(setCommand.Payload, "Sending max_statement_time packet to server:\n")
+	WritePacket(server.stream, setCommand)
+
+	response, err := server.stream.NextPacket()
+	if packetIsERR(response) {
+		return errors.New("Got error from max_statement_time!")
+	}
+	output.Dump(response.Payload, "Got max_statement_time response from server:\n")
+	return err
 }
 
 func (server *ServerConnection) handleQueryResponse() {
