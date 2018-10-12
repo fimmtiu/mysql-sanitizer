@@ -14,8 +14,6 @@ Note that, since it's more of a proof-of-concept than a finished program, it pre
 
 ## TODO
 
-* Write the sanitizer to remove non-whitelisted columns from responses.
-
 * Time out if a query has been in progress for >20 seconds. (Just kill the query, not the entire connection.)
 
 * Consider removing mysqlproto entirely and rolling our own packet stuff. It's not great.
