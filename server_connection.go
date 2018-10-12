@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
@@ -134,16 +136,14 @@ func (server *ServerConnection) handleQueryResponse() {
 					return
 				}
 
-				rows, err := server.readRowValues(rowPacket, columns)
+				rows, err := readRowValues(rowPacket, columns)
 				if err != nil {
 					output.Log("Couldn't receive row values from MySQL server: %s", err)
 					server.finished = true
 					return
 				}
 
-				// FIXME sanitize the rows here
-
-				server.proxy.ClientChannel <- server.constructNewResponse(rowPacket, rows)
+				server.proxy.ClientChannel <- constructNewResponse(rowPacket, rows)
 			}
 		}
 	}
@@ -180,12 +180,11 @@ func packetCommand(packet mysqlproto.Packet) byte {
 	return packet.Payload[0]
 }
 
-func (server *ServerConnection) readColumnDefinitions(packet mysqlproto.Packet) ([]mysqlproto.Column, error) {
+func (server *ServerConnection) readColumnDefinitions(packet mysqlproto.Packet) ([]Column, error) {
 	parser := NewPacketParser(packet)
 	columnCount := parser.ReadEncodedInt()
 
-	columns := make([]mysqlproto.Column, columnCount)
-	fmt.Printf("Got response packet with %d columns, length %d\n", columnCount, len(packet.Payload))
+	columns := make([]Column, columnCount)
 	server.proxy.ClientChannel <- packet
 
 	for i := 0; i < int(columnCount); i++ {
@@ -196,48 +195,48 @@ func (server *ServerConnection) readColumnDefinitions(packet mysqlproto.Packet) 
 		parser = NewPacketParser(packet)
 		server.proxy.ClientChannel <- packet
 
-		column := mysqlproto.Column{}
-		column.Catalog = parser.ReadVariableString()
-		column.Schema = parser.ReadVariableString()
-		column.Table = parser.ReadVariableString()
-		column.OrgTable = parser.ReadVariableString()
-		column.Name = parser.ReadVariableString()
-		column.OrgName = parser.ReadVariableString()
-
-		fixedFieldsLen := parser.ReadEncodedInt()
-		if fixedFieldsLen != 12 {
-			return nil, fmt.Errorf("Weird value for fixedFieldsLen: %d", fixedFieldsLen)
+		column, err := ReadColumn(parser)
+		if err != nil {
+			return nil, err
 		}
-
-		column.CharacterSet = parser.ReadFixedInt2()
-		column.ColumnLength = uint64(parser.ReadFixedInt4())
-		column.ColumnType = mysqlproto.Type(parser.ReadFixedInt1())
-		column.Flags = parser.ReadFixedInt2()
-		column.Decimals = parser.ReadFixedInt1()
-
 		columns[i] = column
 	}
 	return columns, nil
 }
 
-func (server *ServerConnection) readRowValues(packet mysqlproto.Packet, columns []mysqlproto.Column) ([][]byte, error) {
+func readRowValues(packet mysqlproto.Packet, columns []Column) ([][]byte, error) {
 	parser := NewPacketParser(packet)
 	rows := [][]byte{}
 
-	for range columns {
+	for _, col := range columns {
 		value, nonNull := parser.ReadStringOrNull()
 		if nonNull {
 			rowVal := []byte(value)
+			output.Log("Column %s.%s.%s: IsString %s, present %s", col.Database, col.Table, col.Name, col.IsString, whitelist.IsColumnPresent(col.Database, col.Table, col.Name))
+			if !col.IsSafe() {
+				rowVal = sanitizeRow(rowVal, col)
+			}
 			rows = append(rows, rowVal)
 		} else {
 			rows = append(rows, nil)
 		}
 	}
 
-	return rows, nil // FXIXME
+	return rows, nil
 }
 
-func (server *ServerConnection) constructNewResponse(originalPacket mysqlproto.Packet, rows [][]byte) mysqlproto.Packet {
+func sanitizeRow(row []byte, column Column) []byte {
+	sum := sha256.Sum256(row)
+	newRow := make([]byte, sha256.Size*2)
+	hex.Encode(newRow, sum[:])
+
+	if uint32(len(newRow)) > column.Length {
+		newRow = newRow[:column.Length]
+	}
+	return newRow
+}
+
+func constructNewResponse(originalPacket mysqlproto.Packet, rows [][]byte) mysqlproto.Packet {
 	newPacket := mysqlproto.Packet{originalPacket.SequenceID, []byte{}}
 
 	for _, row := range rows {
