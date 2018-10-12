@@ -89,8 +89,10 @@ func (client *ClientConnection) replacePassword(packet mysqlproto.Packet, userna
 	contents.password = config.MysqlPassword
 	client.proxy.Database = contents.database
 
+	// We always disable MULTI_STATEMENTS for now because they're annoying
+	// to parse. If you need it, patches welcome!
 	newPayload := mysqlproto.HandshakeResponse41(
-		contents.flags&client.proxy.Capabilities,
+		contents.flags&client.proxy.Capabilities & ^mysqlproto.CLIENT_MULTI_STATEMENTS,
 		contents.characterSet,
 		contents.username,
 		contents.password,

@@ -11,6 +11,13 @@ import (
 	"github.com/pubnative/mysqlproto-go"
 )
 
+const COM_QUIT byte = 0x01
+const COM_QUERY byte = 0x03
+const COM_FIELD_LIST byte = 0x04
+const COM_STATISTICS byte = 0x09
+const COM_PROCESS_KILL byte = 0x0c
+const COM_PING byte = 0x0e
+
 // ServerConnection is a connection to the MySQL server.
 type ServerConnection struct {
 	proxy      *ProxyConnection
@@ -49,12 +56,19 @@ func (server *ServerConnection) Run() {
 
 	for !server.finished {
 		packet := <-server.proxy.ServerChannel
-		WritePacket(server.stream, packet)
 
-		if packetCommand(packet) == mysqlproto.COM_QUERY {
-			server.handleQueryResponse()
+		if supportedCommand(packet) {
+			WritePacket(server.stream, packet)
+
+			if packetCommand(packet) == mysqlproto.COM_QUERY {
+				server.handleQueryResponse()
+			} else {
+				server.handleOtherResponse()
+			}
 		} else {
-			server.handleOtherResponse()
+			errMessage := VariableString("mysql-sanitizer doesn't support this command: %d", packetCommand(packet))
+			errPacket := mysqlproto.Packet{packet.SequenceID, errMessage}
+			server.proxy.ClientChannel <- errPacket
 		}
 	}
 }
@@ -62,6 +76,15 @@ func (server *ServerConnection) Run() {
 // Close closes the connection to the MySQL server.
 func (server *ServerConnection) Close() {
 	server.stream.Close()
+}
+
+// We currently permit only the minimal set of functionality needed to do
+// basic operations. If you need something more complex (prepared
+// statements, stored procedures, etc.), patches welcome!
+func supportedCommand(packet mysqlproto.Packet) bool {
+	cmd := packetCommand(packet)
+	return cmd == COM_QUIT || cmd == COM_QUERY || cmd == COM_FIELD_LIST ||
+		cmd == COM_STATISTICS || cmd == COM_PROCESS_KILL || cmd == COM_PING
 }
 
 func (server *ServerConnection) doHandshake() {
