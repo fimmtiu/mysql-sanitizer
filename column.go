@@ -70,7 +70,11 @@ func (col Column) IsSafe() bool {
 		// But not things like `CONCAT(address, " ")`, which suuuuuck. (We
 		// should inspect those more closely, but that's for later when we
 		// actually start parsing SQL.)
-		return col.Name != "" || !strings.Contains(col.Alias, "(")
+		if col.Name == "" {
+			return !strings.Contains(col.Name, "(")
+		} else {
+			return !strings.Contains(col.Alias, "(")
+		}
 	}
 
 	// If we've explicitly permitted this column in the JSON list, it's safe.

@@ -6,11 +6,9 @@ This daemon sits between a MySQL client and server, transparently substituting v
 
 In practice, this program was hacked together in about a day and a half by multiple people working as fast as they could with multiple false starts. The code in here is not production-ready and should not be taken as an example of how to do anything. Still, it seems to work.
 
-Note that, since it's more of a proof-of-concept than a finished program, it presently only sanitizes responses from regular MySQL queries. Here are some things we haven't implemented or tested yet:
+Note that, since it's more of a proof-of-concept than a finished program, it presently only sanitizes responses from regular MySQL queries. Attempting to use any features that we don't currently handle ([prepared statements](https://dev.mysql.com/doc/internals/en/com-stmt-execute.html), [stored procedures](https://dev.mysql.com/doc/internals/en/stored-procedures.html), [multi-statement queries](https://dev.mysql.com/doc/internals/en/multi-statement.html), etc.) will signal an error.
 
-* Results from [executing a prepared statement](https://dev.mysql.com/doc/internals/en/com-stmt-execute.html)
-* Results from [multi-statement queries](https://dev.mysql.com/doc/internals/en/multi-statement.html)
-* Results from [executing stored procedures](https://dev.mysql.com/doc/internals/en/stored-procedures.html), including [multiple result sets](https://dev.mysql.com/doc/internals/en/multi-resultset.html)
+We also currently don't allow returning the results of any MySQL function call; any string returned from a function will always be sanitized.
 
 ## Future work
 
