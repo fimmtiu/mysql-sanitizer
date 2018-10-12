@@ -12,6 +12,7 @@ import (
 )
 
 const COM_QUIT byte = 0x01
+const COM_INIT_DB byte = 0x02
 const COM_QUERY byte = 0x03
 const COM_FIELD_LIST byte = 0x04
 const COM_STATISTICS byte = 0x09
@@ -83,7 +84,7 @@ func (server *ServerConnection) Close() {
 // statements, stored procedures, etc.), patches welcome!
 func supportedCommand(packet mysqlproto.Packet) bool {
 	cmd := packetCommand(packet)
-	return cmd == COM_QUIT || cmd == COM_QUERY || cmd == COM_FIELD_LIST ||
+	return cmd == COM_QUIT || cmd == COM_INIT_DB || cmd == COM_QUERY || cmd == COM_FIELD_LIST ||
 		cmd == COM_STATISTICS || cmd == COM_PROCESS_KILL || cmd == COM_PING
 }
 
