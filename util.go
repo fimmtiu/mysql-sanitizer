@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/pubnative/mysqlproto-go"
 )
 
@@ -23,11 +24,11 @@ func LengthEncodedInt(num uint) []byte {
 	if num < 251 {
 		result = append(result, byte(num))
 	} else if num >= 251 && num < 65536 {
-		result = append(result, byte(num&0xFF), byte((num>>8)&0xFF))
+		result = append(result, 0xFC, byte(num&0xFF), byte((num>>8)&0xFF))
 	} else if num >= 65536 && num < 16777216 {
-		result = append(result, byte(num&0xFF), byte((num>>8)&0xFF), byte((num>>16)&0xFF))
+		result = append(result, 0xFD, byte(num&0xFF), byte((num>>8)&0xFF), byte((num>>16)&0xFF))
 	} else {
-		result = append(result,
+		result = append(result, 0xFE,
 			byte(num&0xFF),
 			byte((num>>8)&0xFF),
 			byte((num>>16)&0xFF),
@@ -40,4 +41,10 @@ func LengthEncodedInt(num uint) []byte {
 	}
 
 	return result
+}
+
+func VariableString(format string, args ...interface{}) []byte {
+	str := fmt.Sprintf(format, args...)
+	length := LengthEncodedInt(uint(len(str)))
+	return append(length, []byte(str)...)
 }

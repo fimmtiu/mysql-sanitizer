@@ -27,3 +27,5 @@ Note that, since it's more of a proof-of-concept than a finished program, it pre
 * ClientChannel and ServerChannel have terrible names. Fix that.
 
 * ProxyConnection is kind of an orphan, and ServerConnection is much too large.
+
+* No tests for the fragile state machine code. Need to get on this.
