@@ -62,8 +62,8 @@ func (col Column) IsSafe() bool {
 		return true
 	}
 
-	// Allow viewing the values of internal MySQL variables
-	if col.Database == "" && col.Table == "" && strings.Index(col.Name, "@@") == 0 {
+	// Allow viewing the values of internal stuff like EXPLAIN output and "@@" MySQL variables.
+	if col.Database == "" && col.Table == "" {
 		return true
 	}
 
