@@ -12,10 +12,18 @@ Note that, since it's more of a proof-of-concept than a finished program, it pre
 * Results from [multi-statement queries](https://dev.mysql.com/doc/internals/en/multi-statement.html)
 * Results from [executing stored procedures](https://dev.mysql.com/doc/internals/en/stored-procedures.html), including [multiple result sets](https://dev.mysql.com/doc/internals/en/multi-resultset.html)
 
+## Future work
+
+* We need authentication, perhaps via Infrastructure credentials or Google SSO.
+
+* We need to log all of the following: connection, disconnection, command executed, number of rows returned. This must include the username and IP of the user.
+
+* We need to prevent people testing for the existence of records by doing something like `SELECT * FROM users WHERE first_name = "Bob" AND last_name = "Smith"`. Perhaps we can parse the SQL with something like [https://github.com/xwb1989/sqlparser](https://github.com/xwb1989/sqlparser), then barf if the `WHERE` clause contains anything we would sanitize? More investigation needed.
+
 ## TODO
 
 * Consider removing mysqlproto entirely and rolling our own packet stuff. It's not great, and didn't buy us nearly as much as we'd hoped.
 
-* Will our rewriting strings cause us to exceed `max_allowed_packet` for very large requests?
+* ClientChannel and ServerChannel have terrible names. Fix that.
 
-* ClientChannel and ServerChannel have terrible names.
+* ProxyConnection is kind of an orphan, and ServerConnection is much too large.
