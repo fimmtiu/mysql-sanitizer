@@ -184,6 +184,7 @@ func (server *ServerConnection) handleOtherResponse() {
 			server.finished = true
 			return
 		}
+		output.Dump(response.Payload, "Miscellaneous response packet from server:\n")
 		server.proxy.ClientChannel <- response
 		if packetIsOK(response) || packetIsERR(response) || packetIsEOF(response) {
 			break
