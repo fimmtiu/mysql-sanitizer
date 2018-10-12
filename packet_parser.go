@@ -64,6 +64,15 @@ func (parser *PacketParser) ReadVariableString() string {
 	return string(bytes)
 }
 
+func (parser *PacketParser) ReadStringOrNull() (string, bool) {
+	if parser.data[parser.offset] == 0xFB {
+		parser.offset++
+		return "", false
+	} else {
+		return parser.ReadVariableString(), true
+	}
+}
+
 func (parser *PacketParser) ReadFixedInt1() uint8 {
 	fixedInt := parser.data[parser.offset]
 	parser.offset++

@@ -109,3 +109,33 @@ func TestReadVariableString(t *testing.T) {
 		t.Errorf("Bogus value for offset after variable string read: 0x%02x", parser.offset)
 	}
 }
+
+func TestReadStringOrNull_whenNull(t *testing.T) {
+	packet := mysqlproto.Packet{0, []byte("\xFBfoobar")}
+	parser := NewPacketParser(packet)
+	value, exists := parser.ReadStringOrNull()
+	if exists {
+		t.Error("Non-nil value for null string")
+	}
+	if value != "" {
+		t.Errorf("Non-blank value for null string: '%s'", value)
+	}
+	if parser.offset != 1 {
+		t.Errorf("Bogus value for offset after null string read: 0x%02x", parser.offset)
+	}
+}
+
+func TestReadStringOrNull_whenNotNull(t *testing.T) {
+	packet := mysqlproto.Packet{0, []byte("\x03foobar")}
+	parser := NewPacketParser(packet)
+	value, exists := parser.ReadStringOrNull()
+	if !exists {
+		t.Error("No value for non-null string")
+	}
+	if value != "foo" {
+		t.Errorf("Bogus value for non-null string: '%s'", value)
+	}
+	if parser.offset != 4 {
+		t.Errorf("Bogus value for offset after non-null string read: 0x%02x", parser.offset)
+	}
+}
