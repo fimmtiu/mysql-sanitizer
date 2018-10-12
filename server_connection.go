@@ -212,7 +212,6 @@ func readRowValues(packet mysqlproto.Packet, columns []Column) ([][]byte, error)
 		value, nonNull := parser.ReadStringOrNull()
 		if nonNull {
 			rowVal := []byte(value)
-			output.Log("Column %s.%s.%s: IsString %s, present %s", col.Database, col.Table, col.Name, col.IsString, whitelist.IsColumnPresent(col.Database, col.Table, col.Name))
 			if !col.IsSafe() {
 				rowVal = sanitizeRow(rowVal, col)
 			}

@@ -10,16 +10,18 @@ var output Output
 var config Config
 var whitelist Whitelist
 
-func main() {
+func init() {
+	var err error
+
 	config = GetConfig()
 	output = NewOutput(config)
-	whitelist, err := NewWhitelist(config.WhitelistFile)
+	whitelist, err = NewWhitelist(config.WhitelistFile)
 	if err != nil {
 		log.Fatalf("Error reading whitelist file %s: %s", config.WhitelistFile, err)
 	}
-	if whitelist != nil {
-		output.Log("Success reading the json file: %s", config.WhitelistFile)
-	}
+}
+
+func main() {
 	listener := openListeningSocket(config.ListeningPort)
 
 	for {

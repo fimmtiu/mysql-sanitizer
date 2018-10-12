@@ -48,7 +48,6 @@ func ReadColumn(parser *PacketParser) (Column, error) {
 		column.IsString = false
 	}
 
-	output.Log("column definition for %s: type 0x%02x, IsString %s", column.Name, colType, column.IsString)
 	return column, nil
 }
 
