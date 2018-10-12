@@ -1,17 +1,10 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"github.com/pubnative/mysqlproto-go"
 )
-
-func TestMain(m *testing.M) {
-	config = GetConfig()
-	output = NewOutput(config)
-	os.Exit(m.Run())
-}
 
 func TestReadEncodedInt_1(t *testing.T) {
 	packet := mysqlproto.Packet{0, []byte("\x21")}

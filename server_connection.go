@@ -192,6 +192,7 @@ func (server *ServerConnection) readColumnDefinitions(packet mysqlproto.Packet) 
 		if err != nil {
 			return nil, err
 		}
+		output.Dump(packet.Payload, "Column definition packet from server:\n")
 		parser = NewPacketParser(packet)
 		server.proxy.ClientChannel <- packet
 

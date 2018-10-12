@@ -24,7 +24,7 @@ func TestNewWhitelist(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(*wl, expectedWhiteList) {
+	if !reflect.DeepEqual(wl, expectedWhiteList) {
 		t.Error("Parsing went wrong")
 	}
 }
