@@ -2,7 +2,7 @@
 
 This daemon sits between a MySQL client and server, transparently substituting values in any non-whitelisted string column with garbage. It's suitable for giving access to a production server while preventing users from seeing the entire contents of the database.
 
-In theory.
+**In theory.**
 
 In practice, this program was hacked together in about a day and a half by multiple people working as fast as they could with multiple false starts. The code in here is not production-ready and should not be taken as an example of how to do anything. Still, it seems to work.
 

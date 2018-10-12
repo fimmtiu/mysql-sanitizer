@@ -52,6 +52,11 @@ func TestColumnIsSafe_InfoSchema(t *testing.T) {
 		t.Error("information_schema.schemata should always be safe!")
 	}
 
+	column = Column{true, "information_schema", "table_names", "woopwoop", 255}
+	if !column.IsSafe() {
+		t.Error("information_schema.table_names should always be safe!")
+	}
+
 	column = Column{true, "information_schema", "user_privileges", "woopwoop", 255}
 	if column.IsSafe() {
 		t.Error("Other information_schema tables aren't safe!")

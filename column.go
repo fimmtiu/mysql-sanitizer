@@ -58,7 +58,8 @@ func (col Column) IsSafe() bool {
 	}
 
 	// Don't mangle EXPLAIN and DESCRIBE statements.
-	if col.Database == "information_schema" && (col.Table == "columns" || col.Table == "schemata") {
+	if col.Database == "information_schema" &&
+		(col.Table == "columns" || col.Table == "schemata" || col.Table == "table_names") {
 		return true
 	}
 

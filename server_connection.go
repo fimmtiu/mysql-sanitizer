@@ -226,7 +226,7 @@ func readRowValues(packet mysqlproto.Packet, columns []Column) ([][]byte, error)
 }
 
 func sanitizeRow(row []byte, column Column) []byte {
-	sum := sha256.Sum256(row)
+	sum := sha256.Sum256(append(row, []byte(config.HashSalt)...))
 	newRow := make([]byte, sha256.Size*2)
 	hex.Encode(newRow, sum[:])
 
