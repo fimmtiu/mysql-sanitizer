@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/sha256"
 	"flag"
 	"log"
+	"math/rand"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -19,7 +21,8 @@ type Config struct {
 	MysqlPassword string // The password to log into MySQL with
 	ListeningPort int    // The port to listen for client connections on
 	LogLevel      int    // How much output to generate
-	WhitelistFile string
+	WhitelistFile string // The path to the list of whitelisted string columns
+	HashSalt      string // A random value for generating consistent string garbage
 }
 
 var defaultConfig = Config{
@@ -30,7 +33,24 @@ var defaultConfig = Config{
 	"",               // MysqlPassword
 	3306,             // ListeningPort
 	0,                // LogLevel
-	"whitelist.json", // WhitlistFile
+	"whitelist.json", // WhitelistFile
+	randomHashSalt(), // HashSalt
+}
+
+func randomHashSalt() string {
+	num := rand.Uint64()
+	bytes := make([]byte, 8)
+	bytes[0] = byte(num & 0xFF)
+	bytes[1] = byte((num >> 8) & 0xFF)
+	bytes[2] = byte((num >> 16) & 0xFF)
+	bytes[3] = byte((num >> 24) & 0xFF)
+	bytes[4] = byte((num >> 32) & 0xFF)
+	bytes[5] = byte((num >> 40) & 0xFF)
+	bytes[6] = byte((num >> 48) & 0xFF)
+	bytes[7] = byte((num >> 56) & 0xFF)
+
+	sum := sha256.Sum256(bytes)
+	return string(sum[:])
 }
 
 // GetConfig returns a compendium of configurations collected from the command line.
