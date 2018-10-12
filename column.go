@@ -25,10 +25,10 @@ func ReadColumn(parser *PacketParser) (Column, error) {
 	column := Column{}
 	parser.ReadVariableString() // catalog
 	column.Database = strings.ToLower(parser.ReadVariableString())
-	column.Table = strings.ToLower(parser.ReadVariableString())
-	parser.ReadVariableString() // org_table
-	column.Name = strings.ToLower(parser.ReadVariableString())
-	parser.ReadVariableString() // org_name
+	parser.ReadVariableString()                                 // possibly aliased table name, ignore
+	column.Table = strings.ToLower(parser.ReadVariableString()) // real table name
+	parser.ReadVariableString()                                 // possibly aliased column name, ignore
+	column.Name = strings.ToLower(parser.ReadVariableString())  // real column name
 
 	fixedFieldsLen := parser.ReadEncodedInt()
 	if fixedFieldsLen != 12 {
