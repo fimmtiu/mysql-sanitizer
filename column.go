@@ -17,6 +17,7 @@ type Column struct {
 	IsString bool
 	Database string
 	Table    string
+	Alias    string
 	Name     string
 	Length   uint32
 }
@@ -27,7 +28,7 @@ func ReadColumn(parser *PacketParser) (Column, error) {
 	column.Database = strings.ToLower(parser.ReadVariableString())
 	parser.ReadVariableString()                                 // possibly aliased table name, ignore
 	column.Table = strings.ToLower(parser.ReadVariableString()) // real table name
-	parser.ReadVariableString()                                 // possibly aliased column name, ignore
+	column.Alias = parser.ReadVariableString()                  // possibly aliased column name
 	column.Name = strings.ToLower(parser.ReadVariableString())  // real column name
 
 	fixedFieldsLen := parser.ReadEncodedInt()
@@ -48,6 +49,7 @@ func ReadColumn(parser *PacketParser) (Column, error) {
 		column.IsString = false
 	}
 
+	output.Log("Column: database '%s', table '%s', name '%s' ('%s')", column.Database, column.Table, column.Name, column.Alias)
 	return column, nil
 }
 
@@ -65,7 +67,10 @@ func (col Column) IsSafe() bool {
 
 	// Allow viewing the values of internal stuff like EXPLAIN output and "@@" MySQL variables.
 	if col.Database == "" && col.Table == "" {
-		return true
+		// But not things like `CONCAT(address, " ")`, which suuuuuck. (We
+		// should inspect those more closely, but that's for later when we
+		// actually start parsing SQL.)
+		return col.Name != "" || !strings.Contains(col.Alias, "(")
 	}
 
 	// If we've explicitly permitted this column in the JSON list, it's safe.
