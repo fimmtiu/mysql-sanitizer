@@ -67,8 +67,7 @@ func (server *ServerConnection) Run() {
 				server.handleOtherResponse()
 			}
 		} else {
-			errMessage := VariableString("mysql-sanitizer doesn't support this command: %d", packetCommand(packet))
-			errPacket := mysqlproto.Packet{packet.SequenceID, errMessage}
+			errPacket := ErrorPacket(packet.SequenceID+1, 1002, "HY000", "mysql-sanitizer doesn't support this command: 0x%02x", packetCommand(packet))
 			server.proxy.ClientChannel <- errPacket
 		}
 	}

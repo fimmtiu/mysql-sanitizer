@@ -49,3 +49,19 @@ func VariableString(format string, args ...interface{}) []byte {
 	length := LengthEncodedInt(uint(len(str)))
 	return append(length, []byte(str)...)
 }
+
+func ErrorPacket(sequenceId byte, code int, sqlState string, format string, args ...interface{}) mysqlproto.Packet {
+	// Screw it! We'll assume that everyone has CLIENT_PROTOCOL_41. It's
+	// only been 14 years since it came out...
+	chunks := []byte{0xFF}
+	chunks = append(chunks, byte(code&0xFF), byte((code>>8)&0xFF))
+	chunks = append(chunks, 0x23) // There's no documentation anywhere about what this field is.
+	if len(sqlState) > 5 {
+		panic(fmt.Sprintf("Bogus SQL state for ErrorPacket: '%s'", sqlState))
+	}
+	chunks = append(chunks, []byte(sqlState)...)
+	str := fmt.Sprintf(format, args...)
+	chunks = append(chunks, []byte(str)...)
+
+	return mysqlproto.Packet{sequenceId, chunks}
+}
