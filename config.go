@@ -23,6 +23,7 @@ type Config struct {
 	LogLevel      int    // How much output to generate
 	WhitelistFile string // The path to the list of whitelisted string columns
 	HashSalt      string // A random value for generating consistent string garbage
+	HashSaltBytes []byte // For internal use only
 }
 
 var defaultConfig = Config{
@@ -35,6 +36,7 @@ var defaultConfig = Config{
 	0,                // LogLevel
 	"whitelist.json", // WhitelistFile
 	randomHashSalt(), // HashSalt
+	[]byte{},         // HashSaltBytes
 }
 
 func randomHashSalt() string {
@@ -56,6 +58,7 @@ func randomHashSalt() string {
 // GetConfig returns a compendium of configurations collected from the command line.
 func GetConfig() Config {
 	config := defaultConfig
+	config.HashSaltBytes = []byte(config.HashSalt)
 	var configFile string
 
 	switch len(flag.Args()) {
