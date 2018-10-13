@@ -48,3 +48,22 @@ func TestVariableString_2_bytes(t *testing.T) {
 		t.Errorf("Unexpected result from VariableString: '%s'", string(bytes))
 	}
 }
+
+func TestErrorPacket(t *testing.T) {
+	packet := ErrorPacket(32, 31337, "HONK1", "Your packet makes me sad.")
+	if packet.Payload[0] != 0xFF {
+		t.Errorf("Packet doesn't start with a ERR header: 0x%02x.", packet.Payload[0])
+	}
+	if packet.SequenceID != 33 {
+		t.Errorf("Sequence ID isn't one more than the original: %d.", packet.SequenceID)
+	}
+	if packet.Payload[1] != 0x69 || packet.Payload[2] != 0x7A {
+		t.Errorf("Unexpected error code: 0x%02x%02x.", packet.Payload[2], packet.Payload[1])
+	}
+	if packet.Payload[3] != 0x23 {
+		t.Errorf("Didn't see the SQL state marker: 0x%02x.", packet.Payload[3])
+	}
+	if string(packet.Payload[4:9]) != "HONK1" {
+		t.Errorf("Incorrect SQL state marker: '%s'", string(packet.Payload[4:9]))
+	}
+}

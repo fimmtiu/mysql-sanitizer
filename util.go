@@ -63,5 +63,5 @@ func ErrorPacket(sequenceId byte, code int, sqlState string, format string, args
 	str := fmt.Sprintf(format, args...)
 	chunks = append(chunks, []byte(str)...)
 
-	return mysqlproto.Packet{sequenceId, chunks}
+	return mysqlproto.Packet{sequenceId + 1, chunks}
 }

@@ -49,7 +49,7 @@ func ReadColumn(parser *PacketParser) (Column, error) {
 		column.IsString = false
 	}
 
-	output.Log("Column: database '%s', table '%s', name '%s' ('%s')", column.Database, column.Table, column.Name, column.Alias)
+	output.Debug("Column: database '%s', table '%s', name '%s' ('%s')", column.Database, column.Table, column.Name, column.Alias)
 	return column, nil
 }
 

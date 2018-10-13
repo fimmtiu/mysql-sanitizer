@@ -28,43 +28,43 @@ func TestReadColumn(t *testing.T) {
 }
 
 func TestColumnIsSafe_NotString(t *testing.T) {
-	column := Column{false, "honk", "bonk", "woopwoop", 255}
+	column := Column{false, "honk", "bonk", "blarp", "woopwoop", 255}
 	if !column.IsSafe() {
 		t.Error("Non-string columns should always be safe!")
 	}
 }
 
 func TestColumnIsSafe_String(t *testing.T) {
-	column := Column{true, "honk", "bonk", "woopwoop", 255}
+	column := Column{true, "honk", "bonk", "blarp", "woopwoop", 255}
 	if column.IsSafe() {
 		t.Error("Non-whitelisted string columns shouldn't be safe!")
 	}
 }
 
 func TestColumnIsSafe_InfoSchema(t *testing.T) {
-	column := Column{true, "information_schema", "columns", "woopwoop", 255}
+	column := Column{true, "information_schema", "columns", "blarp", "woopwoop", 255}
 	if !column.IsSafe() {
 		t.Error("information_schema.columns should always be safe!")
 	}
 
-	column = Column{true, "information_schema", "schemata", "woopwoop", 255}
+	column = Column{true, "information_schema", "schemata", "blarp", "woopwoop", 255}
 	if !column.IsSafe() {
 		t.Error("information_schema.schemata should always be safe!")
 	}
 
-	column = Column{true, "information_schema", "table_names", "woopwoop", 255}
+	column = Column{true, "information_schema", "table_names", "blarp", "woopwoop", 255}
 	if !column.IsSafe() {
 		t.Error("information_schema.table_names should always be safe!")
 	}
 
-	column = Column{true, "information_schema", "user_privileges", "woopwoop", 255}
+	column = Column{true, "information_schema", "user_privileges", "blarp", "woopwoop", 255}
 	if column.IsSafe() {
 		t.Error("Other information_schema tables aren't safe!")
 	}
 }
 
 func TestColumnIsSafe_Internals(t *testing.T) {
-	column := Column{true, "", "", "@@woopwoop", 255}
+	column := Column{true, "", "", "", "@@woopwoop", 255}
 	if !column.IsSafe() {
 		t.Error("Columns without a schema should always be safe!")
 	}
